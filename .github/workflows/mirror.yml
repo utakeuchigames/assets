@@ -3,7 +3,7 @@ name: Cross-Repository Specific Sync
 on:
   push:
     branches:
-      - main # assetsリポジトリのメインブランチ名
+      - main
 
 jobs:
   repo-mirror:
@@ -20,7 +20,6 @@ jobs:
           repository: 'utakeuchigames/tool'
           token: ${{ secrets.MIRROR_TOKEN }}
           path: dest-repo
-          # 重要：後続ステップでデフォルト権限が残らないようにする
           persist-credentials: false 
 
       - name: Sync Files
@@ -41,8 +40,7 @@ jobs:
             COMMIT_MSG=$(cd ../source-repo && git log -1 --pretty=%B)
             git commit -m "sync: $COMMIT_MSG"
             
-            # 【重要】URLにトークンを直接含めてプッシュする
-            # Secretsに登録した MIRROR_TOKEN を直接ここでも使用します
+            # 【重要】URLの形式を「https://x-access-token:トークン@github.com/...」に修正
             git push "https://x-access-token:${{ secrets.MIRROR_TOKEN }}@://github.com" HEAD:main
           else
             echo "No changes detected. Skipping sync."
