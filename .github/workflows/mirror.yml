@@ -40,7 +40,7 @@ jobs:
             COMMIT_MSG=$(cd ../source-repo && git log -1 --pretty=%B)
             git commit -m "sync: $COMMIT_MSG"
             
-            # 【重要】URLの形式を「https://x-access-token:トークン@github.com/...」に修正
+            # 【修正】リポジトリのフルURLにトークンを正しく埋め込みます
             git push "https://x-access-token:${{ secrets.MIRROR_TOKEN }}@://github.com" HEAD:main
           else
             echo "No changes detected. Skipping sync."
