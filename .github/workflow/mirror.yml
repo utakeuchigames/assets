@@ -1,0 +1,57 @@
+name: Cross-Repository Specific Sync
+
+on:
+  push:
+    branches:
+      - main # assetsリポジトリのメインブランチ名
+
+jobs:
+  repo-mirror:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. assetsリポジトリ（コピー元）の全ファイルを取得
+      - name: Checkout Source (assets repo)
+        uses: actions/checkout@v4
+        with:
+          path: source-repo
+
+      # 2. toolリポジトリ（コピー先）を取得
+      - name: Checkout Destination (tool repo)
+        uses: actions/checkout@v4
+        with:
+          repository: 'utakeuchigames/tool'
+          token: ${{ secrets.MIRROR_TOKEN }}
+          path: dest-repo
+
+      # 3. toolリポジトリ側の tool/assets/ フォルダを一度全削除して、丸ごと上書き
+      - name: Sync Files to specific folder
+        run: |
+          # コピー先の tool/assets フォルダを一度完全に削除
+          rm -rf dest-repo/tool/assets
+          
+          # 親フォルダ（tool/）が存在することを確認して、assetsフォルダを再作成
+          mkdir -p dest-repo/tool/assets
+          
+          # assetsリポジトリの中身を、toolリポジトリの tool/assets/ の中へ丸ごとコピー
+          # （.git や .github などの管理フォルダを除外してコピーします）
+          rsync -av --exclude='.git' --exclude='.github' source-repo/ dest-repo/tool/assets/
+
+      # 4. toolリポジトリ側へ、元のコミットメッセージを引き継いでPush
+      - name: Commit and Push to tool repo
+        run: |
+          cd dest-repo
+          git config --global user.name "utakeuchigames"
+          git config --global user.email "yamaki3970+1@gmail.com"
+          
+          # 変更（追加・削除・更新）をすべてステージング
+          git add -A
+          
+          # 変更がある場合のみコミットしてPush
+          if ! git diff-index --quiet HEAD; then
+            # assetsリポジトリ側の最新コミットメッセージを取得
+            COMMIT_MSG=$(cd ../source-repo && git log -1 --pretty=%B)
+            git commit -m "sync: $COMMIT_MSG"
+            git push origin HEAD:main # toolリポジトリのメインブランチにPush
+          else
+            echo "No changes detected. Skipping sync."
+          fi
