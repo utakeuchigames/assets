@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'utakeuchigames/tool'
-          token: ${{ secrets.MIRROR_TOKEN }}
+          token: ${{ secrets.MIRROR_TOKEN }} # ★ここでトークンを指定
           path: dest-repo
 
       # 3. toolリポジトリ側の tool/assets/ フォルダを一度全削除して、丸ごと上書き
@@ -38,6 +38,9 @@ jobs:
 
       # 4. toolリポジトリ側へ、元のコミットメッセージを引き継いでPush
       - name: Commit and Push to tool repo
+        env:
+          # トークンを環境変数としてセット
+          SECURE_TOKEN: ${{ secrets.MIRROR_TOKEN }}
         run: |
           cd dest-repo
           git config --global user.name "utakeuchigames"
@@ -51,7 +54,10 @@ jobs:
             # assetsリポジトリ側の最新コミットメッセージを取得
             COMMIT_MSG=$(cd ../source-repo && git log -1 --pretty=%B)
             git commit -m "sync: $COMMIT_MSG"
-            git push origin HEAD:main # toolリポジトリのメインブランチにPush
+            
+            # 【重要】MIRROR_TOKENを使って安全にリモートURLを設定し直してPush
+            git remote set-url origin "https://x-access-token:${SECURE_TOKEN}@://github.com"
+            git push origin HEAD:main
           else
             echo "No changes detected. Skipping sync."
           fi
