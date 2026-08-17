@@ -20,6 +20,7 @@ jobs:
           repository: 'utakeuchigames/tool'
           token: ${{ secrets.MIRROR_TOKEN }}
           path: dest-repo
+          # デフォルト権限の自動記憶を無効化し、後続のPushで自作トークンを確実に使う
           persist-credentials: false 
 
       - name: Sync Files
@@ -31,8 +32,8 @@ jobs:
       - name: Commit and Push to tool repo
         run: |
           cd dest-repo
-          git config --global user.name "utakeuchigames"
-          git config --global user.email "yamaki3970+1@gmail.com"
+          git config user.name "utakeuchigames"
+          git config user.email "yamaki3970+1@gmail.com"
           
           git add -A
           
@@ -40,7 +41,8 @@ jobs:
             COMMIT_MSG=$(cd ../source-repo && git log -1 --pretty=%B)
             git commit -m "sync: $COMMIT_MSG"
             
-            # 【修正】リポジトリのフルURLにトークンを正しく埋め込みます
+            # URLを一つの完全な文字列として組み立ててPush
+            # 認証には x-access-token を利用します
             git push "https://x-access-token:${{ secrets.MIRROR_TOKEN }}@://github.com" HEAD:main
           else
             echo "No changes detected. Skipping sync."
