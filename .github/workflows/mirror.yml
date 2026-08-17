@@ -9,33 +9,27 @@ jobs:
   repo-mirror:
     runs-on: ubuntu-latest
     steps:
-      # 1. assetsリポジトリを取得
       - name: Checkout Source (assets repo)
         uses: actions/checkout@v4
         with:
           path: source-repo
 
-      # 2. toolリポジトリを「MIRROR_TOKEN」を使って取得
       - name: Checkout Destination (tool repo)
         uses: actions/checkout@v4
         with:
           repository: 'utakeuchigames/tool'
           token: ${{ secrets.MIRROR_TOKEN }}
           path: dest-repo
-          persist-credentials: false # 一時的な認証情報の保持を無効化
+          # 重要：後続ステップでデフォルト権限が残らないようにする
+          persist-credentials: false 
 
-      # 3. 指定フォルダを上書き同期
       - name: Sync Files
         run: |
           rm -rf dest-repo/tool/assets
           mkdir -p dest-repo/tool/assets
           rsync -av --exclude='.git' --exclude='.github' source-repo/ dest-repo/tool/assets/
 
-      # 4. トークンをURLに含めて強制的にPush
       - name: Commit and Push to tool repo
-        env:
-          # トークンを環境変数として定義
-          PAT_TOKEN: ${{ secrets.MIRROR_TOKEN }}
         run: |
           cd dest-repo
           git config --global user.name "utakeuchigames"
@@ -47,10 +41,9 @@ jobs:
             COMMIT_MSG=$(cd ../source-repo && git log -1 --pretty=%B)
             git commit -m "sync: $COMMIT_MSG"
             
-            # リモートURLにトークンを直接埋め込む（x-access-tokenを利用）
-            git remote set-url origin "https://x-access-token:${PAT_TOKEN}@://github.com"
-            
-            git push origin HEAD:main
+            # 【重要】URLにトークンを直接含めてプッシュする
+            # Secretsに登録した MIRROR_TOKEN を直接ここでも使用します
+            git push "https://x-access-token:${{ secrets.MIRROR_TOKEN }}@://github.com" HEAD:main
           else
             echo "No changes detected. Skipping sync."
           fi
