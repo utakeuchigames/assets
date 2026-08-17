@@ -16,12 +16,14 @@ jobs:
           path: source-repo
 
       # 2. toolリポジトリ（コピー先）を取得
+      # ★ persist-credentials: false を指定して、デフォルト権限の自動記憶を無効化します
       - name: Checkout Destination (tool repo)
         uses: actions/checkout@v4
         with:
           repository: 'utakeuchigames/tool'
-          token: ${{ secrets.MIRROR_TOKEN }} # ★このトークンがSecretsと一致している必要があります
+          token: ${{ secrets.MIRROR_TOKEN }}
           path: dest-repo
+          persist-credentials: false
 
       # 3. toolリポジトリ側の tool/assets/ フォルダを一度全削除して、丸ごと上書き
       - name: Sync Files to specific folder
@@ -43,7 +45,9 @@ jobs:
             COMMIT_MSG=$(cd ../source-repo && git log -1 --pretty=%B)
             git commit -m "sync: $COMMIT_MSG"
             
-            # 【修正】環境変数を使わず、Actions公式の認証情報をそのまま引き継いでPush
+            # 【重要】URLに直接トークンを埋め込まず、GitのHTTPヘッダーに直接トークンを焼き付けます
+            git config --local http.https://github.com "Authorization: basic $(echo -n "x-access-token:${{ secrets.MIRROR_TOKEN }}" | base64)"
+            
             git push origin HEAD:main
           else
             echo "No changes detected. Skipping sync."
