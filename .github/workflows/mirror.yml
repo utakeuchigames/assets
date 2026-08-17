@@ -27,8 +27,8 @@ jobs:
       # 3. 指定フォルダを上書き同期
       - name: Sync Files
         run: |
-          rm -rf dest-repo/tool/assets
-          mkdir -p dest-repo/tool/assets
+          rm -rf dest-repo/assets
+          mkdir -p dest-repo/assets
           rsync -av --exclude='.git' --exclude='.github' source-repo/ dest-repo/tool/assets/
 
       # 4. toolリポジトリ側へPush
